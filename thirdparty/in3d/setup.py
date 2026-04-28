@@ -1,12 +1,13 @@
-from pathlib import Path
 from setuptools import setup
 
-thirdparty_path = Path(__file__).parent / "thirdparty"
-pyimgui_path = (thirdparty_path / "pyimgui").as_uri()
-
+# `imgui` (pyimgui) is a local sibling package. Upstream embedded it as
+# `pkg @ file:///abs/path` in install_requires, which uv bakes into uv.lock
+# as an absolute path and breaks portability across machines. The root
+# project's pyproject.toml already declares imgui via [tool.uv.sources] /
+# lists it as a direct dep, so we just name it here without the file:// URI.
 setup(
     install_requires=[
-        f"imgui @ {pyimgui_path}",
+        "imgui",
         "moderngl==5.12.0",
         "moderngl-window==2.4.6",
         "glfw",

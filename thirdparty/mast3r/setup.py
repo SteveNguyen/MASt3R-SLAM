@@ -1,9 +1,10 @@
-from pathlib import Path
 from setuptools import setup
 
-curope = Path(__file__).parent / "dust3r" / "croco" / "models" / "curope"
-
-asmk = Path(__file__).parent / "asmk"
+# `curope` and `asmk` are local sibling packages. Upstream embedded them as
+# `pkg @ file:///abs/path` in install_requires, which uv bakes into uv.lock as
+# absolute paths and breaks portability across machines. The root project's
+# pyproject.toml already declares them via [tool.uv.sources] / lists them as
+# direct deps, so we just name them here without the file:// URI.
 setup(
     install_requires=[
         "scikit-learn",
@@ -18,7 +19,7 @@ setup(
         "tensorboard",
         "pyglet",
         "huggingface-hub[torch]>=0.22",
-        f"curope @ {curope.as_uri()}",
-        f"asmk @ {asmk.as_uri()}",
+        "curope",
+        "asmk",
     ],
 )

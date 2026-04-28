@@ -83,7 +83,7 @@ wheels = [
 [[package]]
 name = "asmk"
 version = "0.1"
-source = { editable = "/home/steve/Project/Repo/MASt3R-SLAM/thirdparty/mast3r/asmk" }
+source = { editable = "thirdparty/mast3r/asmk" }
 dependencies = [
     { name = "faiss-cpu" },
     { name = "numpy" },
@@ -221,7 +221,7 @@ wheels = [
 [[package]]
 name = "curope"
 version = "0.0.1"
-source = { editable = "/home/steve/Project/Repo/MASt3R-SLAM/thirdparty/mast3r/dust3r/croco/models/curope" }
+source = { editable = "thirdparty/mast3r/dust3r/croco/models/curope" }
 
 [[package]]
 name = "cycler"
@@ -586,7 +586,7 @@ wheels = [
 [[package]]
 name = "imgui"
 version = "2.0.0"
-source = { editable = "/home/steve/Project/Repo/MASt3R-SLAM/thirdparty/in3d/thirdparty/pyimgui" }
+source = { editable = "thirdparty/in3d/thirdparty/pyimgui" }
 
 [package.metadata]
 requires-dist = [
@@ -634,7 +634,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "glfw" },
-    { name = "imgui", directory = "/home/steve/Project/Repo/MASt3R-SLAM/thirdparty/in3d/thirdparty/pyimgui" },
+    { name = "imgui" },
     { name = "matplotlib" },
     { name = "moderngl", specifier = "==5.12.0" },
     { name = "moderngl-window", specifier = "==2.4.6" },
@@ -875,8 +875,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "asmk", directory = "/home/steve/Project/Repo/MASt3R-SLAM/thirdparty/mast3r/asmk" },
-    { name = "curope", directory = "/home/steve/Project/Repo/MASt3R-SLAM/thirdparty/mast3r/dust3r/croco/models/curope" },
+    { name = "asmk" },
+    { name = "curope" },
     { name = "einops" },
     { name = "gradio" },
     { name = "huggingface-hub", extras = ["torch"], specifier = ">=0.22" },
