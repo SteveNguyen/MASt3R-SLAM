@@ -1,22 +1,66 @@
 [build-system]
-requires = ["setuptools==70.0.0", "torch"]
+requires = ["setuptools>=70", "torch==2.5.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "MAST3R-SLAM"
-version = "0.0.1"
+name = "mast3r-slam"
+version = "0.1.0"
+requires-python = ">=3.11,<3.12"
 dependencies = [
+    # PyTorch stack (resolved from the cu124 index — see [tool.uv.sources])
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+    "torchaudio==2.5.1",
+    # Pinned numerics
     "numpy==1.26.4",
+    # Direct runtime deps of mast3r_slam
     "einops",
-    "pyrealsense2",
     "evo",
     "natsort",
-    # "torchcodec==0.1",
-    "lietorch @ git+https://github.com/princeton-vl/lietorch.git",
     "plyfile",
+    "pyrealsense2",
+    "lietorch",
+    # Local path packages — see [tool.uv.sources] for the location of each.
+    # We list the transitive ones (curope/asmk/imgui) explicitly here so uv
+    # can override their `pkg @ file://...` declarations from the upstream
+    # thirdparty/* setup.py files (uv sources only apply to top-level deps).
+    "mast3r",
+    "in3d",
+    "curope",
+    "asmk",
+    "imgui",
 ]
+
+[project.optional-dependencies]
+mp4 = ["torchcodec==0.1"]
+
+# --- uv-specific configuration -----------------------------------------------
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
+torchvision = { index = "pytorch-cu124" }
+torchaudio = { index = "pytorch-cu124" }
+lietorch = { git = "https://github.com/princeton-vl/lietorch.git" }
+mast3r = { path = "thirdparty/mast3r", editable = true }
+in3d = { path = "thirdparty/in3d", editable = true }
+curope = { path = "thirdparty/mast3r/dust3r/croco/models/curope", editable = true }
+asmk = { path = "thirdparty/mast3r/asmk", editable = true }
+imgui = { path = "thirdparty/in3d/thirdparty/pyimgui", editable = true }
+
+# lietorch is a git source whose setup.py imports torch but ships no
+# pyproject.toml, so uv's isolated build env would have nothing in it.
+# Inject setuptools + torch as build deps; uv installs them in the build env.
+[tool.uv.extra-build-dependencies]
+lietorch = ["setuptools", "torch==2.5.1"]
+
+# --- setuptools configuration for the root package ---------------------------
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["mast3r_slam"]
+include = ["mast3r_slam*"]
 namespaces = false

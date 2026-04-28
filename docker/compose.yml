@@ -1,0 +1,57 @@
+# docker compose -f docker/compose.yml run --rm mast3r-slam <cmd>
+#
+# Mounts the repo at /app for live editing. The venv lives in a named volume
+# (/opt/venv) so the bind-mount of /app does not shadow it, and so that the
+# 15-minute first-time uv sync is preserved across container restarts.
+#
+# The pip cache and HF/torch cache also persist as named volumes to avoid
+# re-downloading torch + checkpoints on every fresh build.
+
+services:
+  mast3r-slam:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: mast3r-slam:cu124
+    # PyTorch shares its model + keyframe buffers across processes via
+    # /dev/shm. Docker's default of 64MB is far too small and triggers
+    # `Bus error` in torch.storage._share_fd_cpu_. 8GB is comfortable.
+    shm_size: "8gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ..:/app
+      - venv:/opt/venv
+      - uv-cache:/root/.cache/uv
+      - hf-cache:/root/.cache/huggingface
+      - torch-cache:/root/.cache/torch
+
+      # --- Optional: bind your dataset/mocap dir read-only at /data
+      # - /home/steve/datasets/mocap-rig:/data:ro
+
+      # --- Optional: X11 forwarding for the live imgui viewer.
+      # On the host:  xhost +local:root   (revoke later with xhost -local:root)
+      # - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    # environment:
+    #   DISPLAY: ${DISPLAY}
+    #   QT_X11_NO_MITSHM: "1"
+
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    # Default to an interactive shell. To run one-off commands:
+    #   docker compose -f docker/compose.yml run --rm mast3r-slam \
+    #     uv run python main.py --dataset /data/seq01 --config config/calib.yaml
+    command: /bin/bash
+
+volumes:
+  venv:
+  uv-cache:
+  hf-cache:
+  torch-cache:

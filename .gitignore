@@ -1,5 +1,15 @@
 checkpoints/
 
+# Editor backups
+*~undo-tree~
+.*~undo-tree~
+*.swp
+*~
+
+# Local helpers
+err.log
+/tum_docker*.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

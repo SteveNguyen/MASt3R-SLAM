@@ -28,12 +28,13 @@ if has_cuda:
     sources.append("mast3r_slam/backend/src/matching_kernels.cu")
     extra_compile_args["nvcc"] = [
         "-O3",
-        "-gencode=arch=compute_60,code=sm_60",
-        "-gencode=arch=compute_61,code=sm_61",
+        # sm_60/sm_61 (Pascal) dropped — incompatible with CUDA 13+ toolchains.
+        # sm_89 added for native Ada (RTX 40-series) code instead of PTX JIT.
         "-gencode=arch=compute_70,code=sm_70",
         "-gencode=arch=compute_75,code=sm_75",
         "-gencode=arch=compute_80,code=sm_80",
         "-gencode=arch=compute_86,code=sm_86",
+        "-gencode=arch=compute_89,code=sm_89",
     ]
     ext_modules = [
         CUDAExtension(
