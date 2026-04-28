@@ -799,7 +799,10 @@ std::vector<torch::Tensor> gauss_newton_points_cuda(
 
     // Termination criteria
     // Need to specify this second argument otherwise ambiguous function call...
-    delta_norm = torch::linalg::linalg_norm(dx, std::optional<c10::Scalar>(), {}, false, {});
+    // torch::linalg::linalg_norm was removed in PyTorch 2.7; the member
+    // function `Tensor::norm()` is the stable cross-version equivalent and
+    // returns a 0-d tensor with the L2 norm over all elements.
+    delta_norm = dx.norm();
     if (delta_norm.item<float>() < delta_thresh) {
       break;
     }
@@ -1216,7 +1219,10 @@ std::vector<torch::Tensor> gauss_newton_rays_cuda(
 
     // Termination criteria
     // Need to specify this second argument otherwise ambiguous function call...
-    delta_norm = torch::linalg::linalg_norm(dx, std::optional<c10::Scalar>(), {}, false, {});
+    // torch::linalg::linalg_norm was removed in PyTorch 2.7; the member
+    // function `Tensor::norm()` is the stable cross-version equivalent and
+    // returns a 0-d tensor with the L2 norm over all elements.
+    delta_norm = dx.norm();
     if (delta_norm.item<float>() < delta_thresh) {
       break;
     }
@@ -1626,7 +1632,10 @@ std::vector<torch::Tensor> gauss_newton_calib_cuda(
 
     // Termination criteria
     // Need to specify this second argument otherwise ambiguous function call...
-    delta_norm = torch::linalg::linalg_norm(dx, std::optional<c10::Scalar>(), {}, false, {});
+    // torch::linalg::linalg_norm was removed in PyTorch 2.7; the member
+    // function `Tensor::norm()` is the stable cross-version equivalent and
+    // returns a 0-d tensor with the L2 norm over all elements.
+    delta_norm = dx.norm();
     if (delta_norm.item<float>() < delta_thresh) {
       break;
     }
