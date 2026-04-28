@@ -30,12 +30,12 @@ The CUDA stack and the install scripts run on any NVIDIA GPU with the [container
 
 ## Installation (Docker, recommended)
 
-The Docker workflow is the path that "just works": it pins Ubuntu 22.04 + CUDA 12.4 toolkit + gcc 11 inside the image, so the host distro / compiler / system CUDA versions don't matter. Tested with a current Arch host.
+The Docker workflow is the path that "just works": it pins Ubuntu 22.04 + CUDA 12.8 toolkit + gcc 11 inside the image, so the host distro / compiler / system CUDA versions don't matter. Tested on Arch and Ubuntu hosts.
 
 Prerequisites on the host:
 
-- Docker 25+ with the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed, so containers can see the GPU. Quick check: `docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi`.
-- Recent NVIDIA driver (≥ 550, the runtime that ships in CUDA 12.4 wheels).
+- Docker 25+ with the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed, so containers can see the GPU. Quick check: `docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu22.04 nvidia-smi`.
+- Recent NVIDIA driver: ≥ 570 for Blackwell (RTX 50-series), ≥ 550 otherwise.
 
 ```bash
 git clone <your-fork-url> --recursive
@@ -48,7 +48,7 @@ cd MASt3R-SLAM/
 docker compose -f docker/compose.yml build
 
 # Drop into a shell. The first run lazily executes `uv sync`, which
-# downloads cu124 PyTorch wheels and compiles the three CUDA extensions
+# downloads cu128 PyTorch wheels and compiles the three CUDA extensions
 # (mast3r_slam_backends, lietorch, curope). That takes ~15 min and is
 # cached afterwards in a named volume.
 docker compose -f docker/compose.yml run --rm mast3r-slam
@@ -77,11 +77,11 @@ If you change CUDA / Python / system deps in [`docker/Dockerfile`](docker/Docker
 <details>
 <summary>Native install with uv. Works only on systems with CUDA 12.x + gcc ≤ 13.</summary>
 
-The repository ships a `pyproject.toml` configured for [uv](https://docs.astral.sh/uv/) with the cu124 PyTorch index pinned, all upstream and local packages declared as `[tool.uv.sources]` path/git deps, and `extra-build-dependencies` set so the lietorch git source builds in an isolated env. Requires uv ≥ 0.8 (we used 0.11).
+The repository ships a `pyproject.toml` configured for [uv](https://docs.astral.sh/uv/) with the cu128 PyTorch index pinned, all upstream and local packages declared as `[tool.uv.sources]` path/git deps, and `extra-build-dependencies` set so the lietorch git source builds in an isolated env. Requires uv ≥ 0.8 (we used 0.11).
 
-PyTorch's `cpp_extension` enforces that the system `nvcc` major+minor matches the CUDA the wheel was built against, so the cu124 wheels mandate a **CUDA 12.4** toolkit. There are no PyTorch wheels for CUDA 13.x. CUDA 12.4 in turn rejects host compilers newer than gcc 13, and gcc 15's libstdc++ uses builtins (`__is_array`, `__is_pointer`, …) that nvcc 12.4 cannot parse — so `-allow-unsupported-compiler` is not enough.
+PyTorch's `cpp_extension` enforces that the system `nvcc` major+minor matches the CUDA the wheel was built against, so the cu128 wheels mandate a **CUDA 12.8** toolkit. CUDA 12.8 rejects host compilers newer than gcc 14, and gcc 15's libstdc++ uses builtins (`__is_array`, `__is_pointer`, …) that nvcc cannot parse — so `-allow-unsupported-compiler` is not enough on bleeding-edge distros.
 
-If your distro already has a usable CUDA 12.4 + gcc ≤ 13 (e.g. Ubuntu 22.04, Debian 12, older Fedora), `uv sync` should just work. Otherwise:
+If your distro already has CUDA 12.8 + gcc ≤ 14 (e.g. Ubuntu 24.04, recent Fedora), `uv sync` should just work. Otherwise:
 
 ```bash
 # Install CUDA 12.4 user-locally to ~/.local/cuda-12.4 (no sudo needed for
@@ -263,13 +263,13 @@ This fork only changes what was needed to make the project build and run on a cu
 
 | File | Change | Why |
 |---|---|---|
-| `pyproject.toml` | Full uv project: cu124 PyTorch index, path/git sources, `extra-build-dependencies` for lietorch, Python 3.11 pin. | Make `uv sync` resolve cleanly with PyTorch matching the bundled CUDA. |
-| `setup.py` | Drop `sm_60`/`sm_61` from gencode, add `sm_89`. | sm_60/61 fail to build on CUDA 13 toolchains; sm_89 (Ada) avoids PTX JIT on RTX 40-series. |
-| `thirdparty/mast3r/dust3r/croco/models/curope/pyproject.toml` *(new)* | Declare `[build-system]` with `setuptools` + `torch==2.5.1`. | The original setup.py had no pyproject.toml, so uv's isolated build env had no setuptools and no torch — and a floating `torch` would pull a newer version, producing an ABI-incompatible `.so`. |
-| `thirdparty/mast3r/dust3r/croco/models/curope/setup.py` | Replace auto-detected gencode list with explicit `sm_70..sm_90`; add `-D_GLIBCXX_USE_CXX11_ABI=0`. | `torch.cuda.get_gencode_flags()` includes sm_100 (Blackwell), which nvcc 12.4 doesn't know about. The ABI flag matches libtorch's old C++11 ABI on Linux wheels — without it, the resulting `.so` references `std::__cxx11::basic_string` symbols that don't exist in libtorch. |
+| `pyproject.toml` | Full uv project: cu128 PyTorch index, torch 2.7.1, path/git sources, `extra-build-dependencies` for lietorch, Python 3.11 pin. | Make `uv sync` resolve cleanly with PyTorch matching the bundled CUDA. cu128 is required for native sm_120 (Blackwell / RTX 50-series); cu124 wheels lack the PTX needed and crash with `no kernel image is available for execution on the device`. |
+| `setup.py` | Drop `sm_60`/`sm_61` from gencode, add `sm_89`/`sm_90`/`sm_120`. | sm_60/61 fail to build on CUDA 13 toolchains; explicit Ada/Hopper/Blackwell entries give native code instead of PTX JIT. |
+| `thirdparty/mast3r/dust3r/croco/models/curope/pyproject.toml` *(new)* | Declare `[build-system]` with `setuptools` + `torch==2.7.1`. | The original setup.py had no pyproject.toml, so uv's isolated build env had no setuptools and no torch — and a floating `torch` would pull a newer version, producing an ABI-incompatible `.so`. |
+| `thirdparty/mast3r/dust3r/croco/models/curope/setup.py` | Replace auto-detected gencode list with explicit `sm_70..sm_120`; add `-D_GLIBCXX_USE_CXX11_ABI=0`. | `torch.cuda.get_gencode_flags()` returns archs the local nvcc may not support; the explicit list matches the toolkit. The ABI flag matches libtorch's old C++11 ABI on Linux wheels — without it, the resulting `.so` references `std::__cxx11::basic_string` symbols that don't exist in libtorch. |
 | `thirdparty/mast3r/dust3r/croco/models/curope/kernels.cu` | `tokens.type()` → `tokens.scalar_type()`. | The deprecated `Tensor::type()` API was removed in PyTorch 2.5; the new API returns `c10::ScalarType` directly, which is what `AT_DISPATCH_*` expects. |
-| `docker/Dockerfile`, `docker/compose.yml`, `docker/entrypoint.sh` *(new)* | Reproducible Ubuntu 22.04 + CUDA 12.4 + gcc 11 + Python 3.11 + uv image; lazy `uv sync` on first container start; persistent venv volume. `shm_size: 8gb` to avoid `Bus error` from PyTorch shared-memory tensors. | Docker is the only path that's reliable across hosts today, given the gcc-15 / nvcc-12.4 incompatibility. |
-| `scripts/install-cuda-12.4.sh` *(new)* | Helper that `wget`s the NVIDIA runfile and installs to `~/.local/cuda-12.4`. | Used only by the host-uv path. |
+| `docker/Dockerfile`, `docker/compose.yml`, `docker/entrypoint.sh` *(new)* | Reproducible Ubuntu 22.04 + CUDA 12.8 + gcc 11 + Python 3.11 + uv image; lazy `uv sync` on first container start; persistent venv volume. `shm_size: 8gb` to avoid `Bus error` from PyTorch shared-memory tensors. | Docker is the only path that's reliable across hosts today, given the gcc-15 / nvcc-12.x incompatibility. |
+| `scripts/install-cuda-12.4.sh` *(new)* | Helper that `wget`s the NVIDIA runfile and installs to `~/.local/cuda-12.4`. | Used only by the (legacy cu124) host-uv path. |
 | `uv.lock` *(new)* | Resolved dependency lockfile. | Pin transitive deps for reproducibility across machines. |
 
 The `mast3r_slam/` source itself, all configs, all evaluation scripts, and the upstream `thirdparty/mast3r/`, `thirdparty/in3d/`, and submodules are unchanged outside the curope subdir.

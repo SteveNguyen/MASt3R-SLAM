@@ -5,8 +5,8 @@ from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
 # Explicit gencode list — `torch.cuda.get_gencode_flags()` returns every arch
-# PyTorch was compiled for, including sm_100 (Blackwell) which nvcc 12.4
-# cannot target.
+# the installed PyTorch was compiled for, which can include archs newer than
+# what the local nvcc supports.
 all_cuda_archs = [
     '-gencode', 'arch=compute_70,code=sm_70',
     '-gencode', 'arch=compute_75,code=sm_75',
@@ -14,6 +14,7 @@ all_cuda_archs = [
     '-gencode', 'arch=compute_86,code=sm_86',
     '-gencode', 'arch=compute_89,code=sm_89',
     '-gencode', 'arch=compute_90,code=sm_90',
+    '-gencode', 'arch=compute_120,code=sm_120',  # Blackwell (RTX 50-series), needs CUDA 12.8+
 ]
 
 setup(

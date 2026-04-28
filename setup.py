@@ -29,12 +29,16 @@ if has_cuda:
     extra_compile_args["nvcc"] = [
         "-O3",
         # sm_60/sm_61 (Pascal) dropped — incompatible with CUDA 13+ toolchains.
-        # sm_89 added for native Ada (RTX 40-series) code instead of PTX JIT.
+        # sm_89: Ada (RTX 40-series).
+        # sm_90: Hopper.
+        # sm_120: Blackwell (RTX 50-series). Requires CUDA 12.8+.
         "-gencode=arch=compute_70,code=sm_70",
         "-gencode=arch=compute_75,code=sm_75",
         "-gencode=arch=compute_80,code=sm_80",
         "-gencode=arch=compute_86,code=sm_86",
         "-gencode=arch=compute_89,code=sm_89",
+        "-gencode=arch=compute_90,code=sm_90",
+        "-gencode=arch=compute_120,code=sm_120",
     ]
     ext_modules = [
         CUDAExtension(

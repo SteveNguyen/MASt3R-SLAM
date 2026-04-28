@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=70", "torch==2.5.1"]
+requires = ["setuptools>=70", "torch==2.7.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,10 +7,13 @@ name = "mast3r-slam"
 version = "0.1.0"
 requires-python = ">=3.11,<3.12"
 dependencies = [
-    # PyTorch stack (resolved from the cu124 index — see [tool.uv.sources])
-    "torch==2.5.1",
-    "torchvision==0.20.1",
-    "torchaudio==2.5.1",
+    # PyTorch stack (resolved from the cu128 index — see [tool.uv.sources]).
+    # cu128 is required for native sm_120 (Blackwell, RTX 50-series). cu124
+    # wheels lack the PTX needed for sm_120 and crash with
+    # `no kernel image is available for execution on the device`.
+    "torch==2.7.1",
+    "torchvision==0.22.1",
+    "torchaudio==2.7.1",
     # Pinned numerics
     "numpy==1.26.4",
     # Direct runtime deps of mast3r_slam
@@ -37,14 +40,14 @@ mp4 = ["torchcodec==0.1"]
 # --- uv-specific configuration -----------------------------------------------
 
 [[tool.uv.index]]
-name = "pytorch-cu124"
-url = "https://download.pytorch.org/whl/cu124"
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
 [tool.uv.sources]
-torch = { index = "pytorch-cu124" }
-torchvision = { index = "pytorch-cu124" }
-torchaudio = { index = "pytorch-cu124" }
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
 lietorch = { git = "https://github.com/princeton-vl/lietorch.git" }
 mast3r = { path = "thirdparty/mast3r", editable = true }
 in3d = { path = "thirdparty/in3d", editable = true }
@@ -56,7 +59,7 @@ imgui = { path = "thirdparty/in3d/thirdparty/pyimgui", editable = true }
 # pyproject.toml, so uv's isolated build env would have nothing in it.
 # Inject setuptools + torch as build deps; uv installs them in the build env.
 [tool.uv.extra-build-dependencies]
-lietorch = ["setuptools", "torch==2.5.1"]
+lietorch = ["setuptools", "torch==2.7.1"]
 
 # --- setuptools configuration for the root package ---------------------------
 

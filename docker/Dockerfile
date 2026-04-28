@@ -1,13 +1,13 @@
 # Self-contained dev image for MASt3R-SLAM.
 #
-# Why this base: nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 ships
-#   - CUDA 12.4 toolkit at /usr/local/cuda (matches PyTorch cu124 wheels exactly)
+# Why this base: nvidia/cuda:12.8.1-cudnn-devel-ubuntu22.04 ships
+#   - CUDA 12.8 toolkit at /usr/local/cuda (matches PyTorch cu128 wheels exactly)
 #   - cuDNN 9 dev headers
-#   - gcc 11 by default (well under the gcc<=13 ceiling enforced by nvcc 12.4)
+#   - gcc 11 by default (well under the gcc<=14 ceiling enforced by nvcc 12.8)
 # so the three CUDA extensions in this repo (mast3r_slam_backends, lietorch,
-# curope) compile without any of the host-side toolchain juggling required on
-# rolling-release distros like Arch.
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+# curope) compile without any host-side toolchain juggling. cu128 is required
+# for native sm_120 (Blackwell, RTX 50-series).
+FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
