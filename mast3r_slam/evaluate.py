@@ -46,18 +46,18 @@ def save_traj(
 
 def save_per_frame_traj(logdir, logfile, timestamps, per_frame_log):
     """Write a TUM-format trajectory with one line per *processed* frame
-    (not just keyframes). `per_frame_log` is a list of (frame_id, T_WC tensor)
-    captured during tracking. Note the poses are not retroactively refined by
-    later global BA — only keyframes get that treatment.
+    (not just keyframes). `per_frame_log` is a list of (frame_id, se3_tensor)
+    where se3_tensor is the 7-component [tx ty tz qx qy qz qw] vector already
+    snapshotted at tracking time. Note these poses are not retroactively
+    refined by later global BA — only keyframes get that treatment.
     """
     logdir = pathlib.Path(logdir)
     logdir.mkdir(exist_ok=True, parents=True)
     logfile = logdir / logfile
     with open(logfile, "w") as f:
-        for frame_id, T_WC in per_frame_log:
+        for frame_id, T_data in per_frame_log:
             t = timestamps[frame_id]
-            T_se3 = as_SE3(T_WC)
-            x, y, z, qx, qy, qz, qw = T_se3.data.numpy().reshape(-1)
+            x, y, z, qx, qy, qz, qw = T_data.numpy().reshape(-1)
             f.write(f"{t} {x} {y} {z} {qx} {qy} {qz} {qw}\n")
 
 

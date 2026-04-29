@@ -230,11 +230,15 @@ if __name__ == "__main__":
 
     frames = []
 
-    # Per-frame pose log: list of (frame_id, T_WC tensor on cpu). Captures the
-    # estimated pose of every successfully-tracked frame, not just keyframes.
+    # Per-frame pose log: list of (frame_id, SE3 tensor [tx ty tz qx qy qz qw]
+    # on cpu). Captures the estimated pose of every successfully-tracked frame,
+    # not just keyframes. We snapshot to plain tensors here because lietorch's
+    # Sim3 has no .clone() and we need the value frozen at log time before any
+    # later in-place updates from the backend.
     # Note: these poses use the keyframe-graph state at the time of tracking;
     # later global BA may refine keyframes but won't propagate back to past
     # non-keyframe entries here.
+    from mast3r_slam.lietorch_utils import as_SE3
     per_frame_log: list[tuple[int, torch.Tensor]] = []
 
     while True:
@@ -277,7 +281,7 @@ if __name__ == "__main__":
             states.queue_global_optimization(len(keyframes) - 1)
             states.set_mode(Mode.TRACKING)
             states.set_frame(frame)
-            per_frame_log.append((i, frame.T_WC.detach().cpu().clone()))
+            per_frame_log.append((i, as_SE3(frame.T_WC).data.detach().cpu().clone()))
             i += 1
             continue
 
@@ -286,7 +290,7 @@ if __name__ == "__main__":
             if try_reloc:
                 states.set_mode(Mode.RELOC)
             else:
-                per_frame_log.append((i, frame.T_WC.detach().cpu().clone()))
+                per_frame_log.append((i, as_SE3(frame.T_WC).data.detach().cpu().clone()))
             states.set_frame(frame)
 
         elif mode == Mode.RELOC:
