@@ -190,25 +190,10 @@ def run_mast3r_slam(
 # ---------------------------------------------------------------------------
 
 
-def tum_to_grabette_csv(
-    tum_path: Path,
-    out_csv: Path,
-    n_frames: int,
-    fps: float,
-    stride: int,
-) -> None:
-    """Convert MASt3R-SLAM's TUM keyframe trajectory to grabette per-frame CSV.
-
-    grabette format (1 row per video frame_idx):
-        frame_idx,timestamp,state,is_lost,is_keyframe,x,y,z,q_x,q_y,q_z,q_w
-
-    MASt3R-SLAM TUM rows correspond to keyframes only. The TUM `t` column is
-    `subsampled_idx / fps`, so the original video frame_idx is
-    `round(t * fps) * stride`.
-    """
-    # Read TUM, build {frame_idx -> pose}
-    tum_rows = []
-    with open(tum_path) as f:
+def _parse_tum(path: Path, fps: float, stride: int) -> dict[int, tuple[float, ...]]:
+    """Read a TUM-format trajectory and key it by original video frame_idx."""
+    rows: dict[int, tuple[float, ...]] = {}
+    with open(path) as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#"):
@@ -221,21 +206,51 @@ def tum_to_grabette_csv(
             qx, qy, qz, qw = (float(v) for v in parts[4:8])
             sub_idx = int(round(t * fps))
             frame_idx = sub_idx * stride
-            tum_rows.append((frame_idx, x, y, z, qx, qy, qz, qw))
-    keyframe_map = {row[0]: row[1:] for row in tum_rows}
-    print(f"  Keyframes parsed from TUM: {len(keyframe_map)}", flush=True)
+            rows[frame_idx] = (x, y, z, qx, qy, qz, qw)
+    return rows
 
-    # Emit one row per video frame.
+
+def tum_to_grabette_csv(
+    keyframe_tum_path: Path,
+    out_csv: Path,
+    n_frames: int,
+    fps: float,
+    stride: int,
+    per_frame_tum_path: Path | None = None,
+) -> None:
+    """Convert MASt3R-SLAM's TUM trajectory to grabette per-frame CSV.
+
+    grabette format (1 row per video frame_idx):
+        frame_idx,timestamp,state,is_lost,is_keyframe,x,y,z,q_x,q_y,q_z,q_w
+
+    If `per_frame_tum_path` is provided and exists, every processed frame is
+    written as a tracked row (~503 rows for a 1007-frame episode at stride=2),
+    with `is_keyframe=true` for the subset that became keyframes. Otherwise,
+    only the ~50 keyframe rows are tracked and the rest are `is_lost=true`.
+    """
+    keyframe_map = _parse_tum(keyframe_tum_path, fps, stride)
+    print(f"  Keyframes parsed: {len(keyframe_map)}", flush=True)
+
+    if per_frame_tum_path is not None and per_frame_tum_path.is_file():
+        per_frame_map = _parse_tum(per_frame_tum_path, fps, stride)
+        print(f"  Per-frame poses parsed: {len(per_frame_map)}", flush=True)
+    else:
+        per_frame_map = keyframe_map  # fall back: keyframe-only trajectory
+        print(f"  No per-frame file; CSV will be sparse.", flush=True)
+
+    keyframe_ids = set(keyframe_map.keys())
+
     with open(out_csv, "w") as f:
         f.write(
             "frame_idx,timestamp,state,is_lost,is_keyframe,x,y,z,q_x,q_y,q_z,q_w\n"
         )
         for frame_idx in range(n_frames):
             t = frame_idx / fps
-            if frame_idx in keyframe_map:
-                x, y, z, qx, qy, qz, qw = keyframe_map[frame_idx]
+            if frame_idx in per_frame_map:
+                x, y, z, qx, qy, qz, qw = per_frame_map[frame_idx]
+                is_kf = "true" if frame_idx in keyframe_ids else "false"
                 f.write(
-                    f"{frame_idx},{t:.6f},2,false,true,"
+                    f"{frame_idx},{t:.6f},2,false,{is_kf},"
                     f"{x:.9f},{y:.9f},{z:.9f},"
                     f"{qx:.9f},{qy:.9f},{qz:.9f},{qw:.9f}\n"
                 )
@@ -333,18 +348,23 @@ def main() -> None:
     stride = read_subsample_stride(REPO_ROOT / args.config)
     print(f"  subsample stride from {args.config}: {stride}")
 
+    per_frame_tum = tum_path.with_name(tum_path.stem + "_per_frame.txt")
+
     out_csv = episode / "mast3r_camera_trajectory.csv"
     print(f"==> Writing grabette-format CSV: {out_csv.name}")
     tum_to_grabette_csv(
-        tum_path=tum_path,
+        keyframe_tum_path=tum_path,
         out_csv=out_csv,
         n_frames=meta["frame_count"],
         fps=meta["fps"],
         stride=stride,
+        per_frame_tum_path=per_frame_tum,
     )
 
-    # Also copy the TUM trajectory next to it for completeness.
+    # Also copy the TUM trajectories next to it for completeness.
     shutil.copy2(tum_path, episode / f"mast3r_{tum_path.name}")
+    if per_frame_tum.is_file():
+        shutil.copy2(per_frame_tum, episode / f"mast3r_{per_frame_tum.name}")
     print(f"\nDone.")
     print(f"  CSV:  {out_csv}")
     print(f"  Visualize:  uv run python scripts/visualize_trajectory.py {episode}  "

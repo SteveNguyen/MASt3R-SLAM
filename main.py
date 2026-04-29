@@ -230,6 +230,13 @@ if __name__ == "__main__":
 
     frames = []
 
+    # Per-frame pose log: list of (frame_id, T_WC tensor on cpu). Captures the
+    # estimated pose of every successfully-tracked frame, not just keyframes.
+    # Note: these poses use the keyframe-graph state at the time of tracking;
+    # later global BA may refine keyframes but won't propagate back to past
+    # non-keyframe entries here.
+    per_frame_log: list[tuple[int, torch.Tensor]] = []
+
     while True:
         mode = states.get_mode()
         msg = try_get_msg(viz2main)
@@ -270,6 +277,7 @@ if __name__ == "__main__":
             states.queue_global_optimization(len(keyframes) - 1)
             states.set_mode(Mode.TRACKING)
             states.set_frame(frame)
+            per_frame_log.append((i, frame.T_WC.detach().cpu().clone()))
             i += 1
             continue
 
@@ -277,6 +285,8 @@ if __name__ == "__main__":
             add_new_kf, match_info, try_reloc = tracker.track(frame)
             if try_reloc:
                 states.set_mode(Mode.RELOC)
+            else:
+                per_frame_log.append((i, frame.T_WC.detach().cpu().clone()))
             states.set_frame(frame)
 
         elif mode == Mode.RELOC:
@@ -312,6 +322,9 @@ if __name__ == "__main__":
     if dataset.save_results:
         save_dir, seq_name = eval.prepare_savedir(args, dataset)
         eval.save_traj(save_dir, f"{seq_name}.txt", dataset.timestamps, keyframes)
+        eval.save_per_frame_traj(
+            save_dir, f"{seq_name}_per_frame.txt", dataset.timestamps, per_frame_log
+        )
         eval.save_reconstruction(
             save_dir,
             f"{seq_name}.ply",
