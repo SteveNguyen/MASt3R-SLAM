@@ -10,6 +10,18 @@ checkpoints/
 err.log
 /tum_docker*.sh
 
+# Episode test data — videos / IMU / generated trajectories. The .yaml
+# calibration files in test_data/ are tracked.
+test_data/**/raw_video.mp4
+test_data/**/raw_video_pinhole.mp4
+test_data/**/imu_data*.json
+test_data/**/*.csv
+test_data/**/*.osa
+test_data/**/*.png
+test_data/**/slam_std*.txt
+test_data/**/intrinsics_pinhole.yaml
+test_data/**/mast3r_*.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
